@@ -537,14 +537,14 @@ async fn main() -> anyhow::Result<()> {
 
 
                     // If pubkey looks like an ENS name or DNS domain, resolve it first
-                    let resolved_pubkey = if ens::is_ens_name(&pubkey) || ens::is_dns_name(&pubkey) {
+                    let resolved_pubkey = if ens::is_ens_name(pubkey) || ens::is_dns_name(pubkey) {
                         let rpc = load_config(cli.config.as_deref())
                             .ok()
                             .and_then(|c| c.discovery.eth_rpc);
                         if tty() {
                             eprintln!("  {DIM}Resolving {}...{RESET}", pubkey);
                         }
-                        match ens::resolve(&pubkey, rpc.as_deref()).await {
+                        match ens::resolve(pubkey, rpc.as_deref()).await {
                             Ok(identity) => {
                                 if tty() {
                                     eprintln!("  {GREEN}✓{RESET} Resolved to {CYAN}{}{RESET}", identity.pubkey);
@@ -635,15 +635,12 @@ async fn main() -> anyhow::Result<()> {
         }
 
         Commands::Resolve { name, eth_rpc } => {
-            let rpc = eth_rpc
-                .or_else(|| {
-                    load_config(cli.config.as_deref())
-                        .ok()
-                        .and_then(|c| c.discovery.eth_rpc)
-                })
-                .map(|s| s.clone());
+            let config_rpc = load_config(cli.config.as_deref())
+                .ok()
+                .and_then(|c| c.discovery.eth_rpc);
+            let rpc = eth_rpc.clone().or(config_rpc);
 
-            match ens::resolve(&name, rpc.as_deref()).await {
+            match ens::resolve(name, rpc.as_deref()).await {
                 Ok(identity) => {
                     if tty() {
                         println!();

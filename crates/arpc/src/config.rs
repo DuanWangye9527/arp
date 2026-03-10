@@ -77,6 +77,7 @@ pub enum Commands {
  #[arg(long)]
  eth_rpc: Option<String>,
  },
+/// Run diagnostics to verify installation health.
     Doctor,
 }
 

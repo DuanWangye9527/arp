@@ -29,6 +29,7 @@ pub struct ResolvedIdentity {
 /// JSON schema for the `agent.arp` ENS Text Record value
 /// and the DNS TXT record value.
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct IdentityRecord {
     pubkey: String,
     #[serde(default)]
@@ -91,9 +92,7 @@ pub async fn resolve(name: &str, eth_rpc: Option<&str>) -> anyhow::Result<Resolv
 /// Default public Ethereum RPC endpoint (Cloudflare).
 const DEFAULT_ETH_RPC: &str = "https://cloudflare-eth.com";
 
-/// ENS Public Resolver address on Ethereum mainnet.
-const ENS_PUBLIC_RESOLVER: &str = "0x4976fb03C32e5B8cfe2b6cCB31c09Ba78EBaBa41";
-
+// ENS_PUBLIC_RESOLVER removed - not used
 /// Resolve an ENS name to an ARP identity via the `agent.arp` Text Record.
 ///
 /// Uses the Ethereum JSON-RPC `eth_call` to call `resolver.text(namehash, "agent.arp")`.
@@ -150,7 +149,7 @@ fn namehash(name: &str) -> String {
     let mut node = [0u8; 32]; // starts as 0x000...000
 
     if name.is_empty() {
-        return hex::encode(node);
+        return format!("0x{}", hex::encode(node));
     }
 
     // Split on '.' and process labels right-to-left
@@ -203,7 +202,7 @@ async fn ens_get_text(
     // ABI-encode the call: selector + node + offset to string + string length + string data
     let key_bytes = key.as_bytes();
     let key_len = key_bytes.len();
-    let key_padded_len = ((key_len + 31) / 32) * 32;
+    let key_padded_len = key_len.div_ceil(32) * 32;
 
     let mut call_data = format!(
         "0x59d1d43c\

@@ -45,3 +45,7 @@ futures-util = { workspace = true }
 reqwest = { workspace = true }
 sha2 = { workspace = true }
 zeroize = { workspace = true }
+
+# ENS / DNS resolution
+sha3 = "0.10"
+hex = "0.4"

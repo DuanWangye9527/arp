@@ -69,6 +69,15 @@ pub enum Commands {
         check: bool,
     },
     /// Run diagnostics to verify installation health.
+ /// Resolve an ENS name or DNS domain to an ARP public key.
+ Resolve {
+ /// ENS name (e.g. alice.eth) or DNS domain (e.g. alice.example.com).
+ name: String,
+ /// Ethereum RPC endpoint URL (optional, uses public default if omitted).
+ #[arg(long)]
+ eth_rpc: Option<String>,
+ },
+/// Run diagnostics to verify installation health.
     Doctor,
 }
 
@@ -115,6 +124,9 @@ pub struct ClientConfig {
     pub webhook: WebhookConfig,
     /// OpenClaw gateway bridge settings.
     pub bridge: BridgeConfig,
+ /// ENS and DNS agent discovery settings.
+ #[serde(default)]
+ pub discovery: DiscoveryConfig,
 }
 
 /// Reconnect backoff parameters.
@@ -213,6 +225,7 @@ impl Default for ClientConfig {
             webhook: WebhookConfig::default(),
             bridge: BridgeConfig::default(),
             relay_pubkey: None,
+            discovery: DiscoveryConfig::default(),
         }
     }
 }
@@ -372,6 +385,34 @@ pub fn load_config(path: Option<&Path>) -> anyhow::Result<ClientConfig> {
     let config: ClientConfig = settings.try_deserialize()?;
 
     Ok(config)
+}
+
+/// Configuration for ENS and DNS-based agent identity discovery.
+#[derive(Debug, Deserialize, Clone)]
+pub struct DiscoveryConfig {
+ /// Ethereum JSON-RPC endpoint for ENS resolution.
+ /// Defaults to a public endpoint if not set.
+ #[serde(default)]
+ pub eth_rpc: Option<String>,
+ /// Cache TTL for ENS lookups, in seconds.
+ #[serde(default = "default_ens_cache_ttl")]
+ pub ens_cache_ttl_s: u64,
+ /// Cache TTL for DNS TXT lookups, in seconds.
+ #[serde(default = "default_dns_cache_ttl")]
+ pub dns_cache_ttl_s: u64,
+}
+
+fn default_ens_cache_ttl() -> u64 { 300 }
+fn default_dns_cache_ttl() -> u64 { 60 }
+
+impl Default for DiscoveryConfig {
+ fn default() -> Self {
+ Self {
+ eth_rpc: None,
+ ens_cache_ttl_s: default_ens_cache_ttl(),
+ dns_cache_ttl_s: default_dns_cache_ttl(),
+ }
+ }
 }
 
 #[cfg(test)]

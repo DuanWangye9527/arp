@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 
 use arpc::config::{load_config, Cli, Commands, ContactAction};
+use arpc::ens;
 use arpc::contacts::ContactStore;
 use arpc::keypair;
 use arpc::local_api;
@@ -534,8 +535,37 @@ async fn main() -> anyhow::Result<()> {
                         std::process::exit(1);
                     }
 
+
+                    // If pubkey looks like an ENS name or DNS domain, resolve it first
+                    let resolved_pubkey = if ens::is_ens_name(&pubkey) || ens::is_dns_name(&pubkey) {
+                        let rpc = load_config(cli.config.as_deref())
+                            .ok()
+                            .and_then(|c| c.discovery.eth_rpc);
+                        if tty() {
+                            eprintln!("  {DIM}Resolving {}...{RESET}", pubkey);
+                        }
+                        match ens::resolve(&pubkey, rpc.as_deref()).await {
+                            Ok(identity) => {
+                                if tty() {
+                                    eprintln!("  {GREEN}✓{RESET} Resolved to {CYAN}{}{RESET}", identity.pubkey);
+                                }
+                                identity.pubkey
+                            }
+                            Err(e) => {
+                                if tty() {
+                                    eprintln!("  {RED}✗{RESET} Resolution failed: {}", e);
+                                } else {
+                                    eprintln!("resolve error: {}", e);
+                                }
+                                std::process::exit(1);
+                            }
+                        }
+                    } else {
+                        pubkey.clone()
+                    };
+
                     // Validate pubkey before sending to daemon
-                    if let Err(e) = base58::decode_pubkey(pubkey) {
+                    if let Err(e) = base58::decode_pubkey(&resolved_pubkey) {
                         if tty() {
                             println!("  {RED}\u{2717}{RESET} Invalid public key: {DIM}{e}{RESET}");
                         } else {
@@ -548,7 +578,7 @@ async fn main() -> anyhow::Result<()> {
                     let cmd = serde_json::json!({
                         "cmd": "contact_add",
                         "name": name,
-                        "pubkey": pubkey,
+                        "pubkey": resolved_pubkey,
                         "notes": notes,
                     });
                     let resp = daemon_cmd(addr, &serde_json::to_string(&cmd)?).await?;
@@ -601,6 +631,43 @@ async fn main() -> anyhow::Result<()> {
                 arp_common::update::check_for_update("arpc", env!("CARGO_PKG_VERSION")).await?;
             } else {
                 arp_common::update::perform_update("arpc", env!("CARGO_PKG_VERSION")).await?;
+            }
+        }
+
+        Commands::Resolve { name, eth_rpc } => {
+            let rpc = eth_rpc
+                .or_else(|| {
+                    load_config(cli.config.as_deref())
+                        .ok()
+                        .and_then(|c| c.discovery.eth_rpc)
+                })
+                .map(|s| s.clone());
+
+            match ens::resolve(&name, rpc.as_deref()).await {
+                Ok(identity) => {
+                    if tty() {
+                        println!();
+                        println!("  {BOLD}◈ Resolved{RESET} {CYAN}{}{RESET}", name);
+                        println!("  {DIM}Pubkey{RESET} {CYAN}{}{RESET}", identity.pubkey);
+                        if let Some(relay) = &identity.relay {
+                            println!("  {DIM}Relay{RESET} {}", relay);
+                        }
+                        println!();
+                    } else {
+                        println!("pubkey: {}", identity.pubkey);
+                        if let Some(relay) = &identity.relay {
+                            println!("relay: {}", relay);
+                        }
+                    }
+                }
+                Err(e) => {
+                    if tty() {
+                        eprintln!("  {RED}✗{RESET} {}", e);
+                    } else {
+                        eprintln!("error: {}", e);
+                    }
+                    std::process::exit(1);
+                }
             }
         }
 

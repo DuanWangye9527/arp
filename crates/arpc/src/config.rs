@@ -224,6 +224,7 @@ impl Default for ClientConfig {
             webhook: WebhookConfig::default(),
             bridge: BridgeConfig::default(),
             relay_pubkey: None,
+            discovery: DiscoveryConfig::default(),
         }
     }
 }

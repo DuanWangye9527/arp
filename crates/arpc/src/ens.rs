@@ -133,7 +133,7 @@ async fn resolve_ens(name: &str, eth_rpc: Option<&str>) -> anyhow::Result<Resolv
 
 /// Compute the ENS namehash for a name (EIP-137).
 fn namehash(name: &str) -> String {
-    use sha2::{Digest, Sha256};
+    // sha2 imports removed - not used
 
     // ENS namehash uses Keccak-256, but we approximate with a pure-Rust
     // implementation using the tiny-keccak approach via sha3.

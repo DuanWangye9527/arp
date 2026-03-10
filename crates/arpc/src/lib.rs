@@ -15,6 +15,8 @@ pub mod contacts;
 pub mod hpke_seal;
 /// Ed25519 keypair generation and loading.
 pub mod keypair;
+/// ENS and DNS TXT resolution for agent identity discovery.
+pub mod ens;
 /// Line-delimited JSON API over TCP/Unix sockets.
 pub mod local_api;
 /// WebSocket relay connection manager.

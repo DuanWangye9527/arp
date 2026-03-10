@@ -26,16 +26,11 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Format code
-        run: cargo fmt --all
-
-      - name: Commit formatting fixes if needed
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          cargo fmt --all
           if ! git diff --quiet; then
-            git add -A
-            git commit -m "style: auto-format with cargo fmt"
-            git push
+            echo "Code formatting required. Run 'cargo fmt --all' locally and commit."
+            exit 1
           fi
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace

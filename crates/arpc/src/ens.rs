@@ -476,10 +476,10 @@ mod tests {
         // Minimal JSON (no relay)
         let json = r#"{"pubkey":"7EcDy2GvMpBRbnkJRCsj7xp5n4KfQvBGBBr3TH8YXVW4"}"#;
         let result = parse_identity_record(json);
-        match result {
-            Ok(id) => assert!(id.relay.is_none()),
-            Err(_) => {} // pubkey validation failure is ok for test data
+        if let Ok(id) = result {
+            assert!(id.relay.is_none());
         }
+        // Err(_) is ok for test data
     }
 
     #[test]
